@@ -15,8 +15,8 @@ jobs:
     env:
       ASC_KEY_ID: 38F6WA87DU
       ASC_ISSUER_ID: 73c7355a-beef-4d79-919d-c3d7dec7747a
-      ARCHIVE_PATH: ${{ runner.temp }}/ExecCommuteCoach.xcarchive
-      EXPORT_PATH: ${{ runner.temp }}/export
+      ARCHIVE_PATH: build/ExecCommuteCoach.xcarchive
+      EXPORT_PATH: build/export
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
