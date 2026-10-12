@@ -14,8 +14,10 @@ let package = Package(
         .executableTarget(
             name: "VocalisApp",
             path: "Sources/VocalisApp"
-        )
+        ),
         .testTarget(
             name: "VocalisTests",
             dependencies: ["VocalisApp"]
         )
+    ]
+)
