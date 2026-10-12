@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Vocalis",
+    name: "ExecCommuteCoach",
     platforms: [.iOS(.v16)],
     products: [
         .executable(
@@ -15,5 +15,7 @@ let package = Package(
             name: "VocalisApp",
             path: "Sources/VocalisApp"
         )
-    ]
-)
+        .testTarget(
+            name: "VocalisTests",
+            dependencies: ["VocalisApp"]
+        )

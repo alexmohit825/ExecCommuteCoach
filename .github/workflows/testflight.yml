@@ -1,0 +1,54 @@
+name: TestFlight CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby (for fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install Fastlane
+        run: gem install fastlane
+
+      - name: Build and archive
+        run: |
+          xcodebuild \
+            -scheme VocalisApp \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath ${{ runner.temp }}/Vocalis.xcarchive \
+            clean archive
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ${{ runner.temp }}/Vocalis.xcarchive \
+            -exportPath ${{ runner.temp }}/ExportedIPA \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Validate IPA with altool
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          xcrun altool --validate-app -f ${{ runner.temp }}/ExportedIPA/VocalisApp.ipa -t ios -u ${{ secrets.APP_STORE_CONNECT_USERNAME }} -p ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          fastlane pilot upload \
+            --ipa ${{ runner.temp }}/ExportedIPA/VocalisApp.ipa \
+            --skip_metadata true \
+            --skip_screenshots true

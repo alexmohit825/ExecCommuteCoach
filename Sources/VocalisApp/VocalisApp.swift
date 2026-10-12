@@ -5,12 +5,22 @@ struct VocalisApp: App {
     // Initialize telemetry engines
     @StateObject private var acousticEngine = AcousticTelemetryEngineWrapper()
     @StateObject private var speechEngine = SpeechTelemetryEngineWrapper()
-
+    @StateObject private var frictionEngine = FrictionCoachEngineWrapper()
+    
+    init() {
+        try? CarAudioDirector.shared.configureSession()
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(acousticEngine)
                 .environmentObject(speechEngine)
+                .environmentObject(frictionEngine)
+                .onAppear {
+                    // Start dynamic friction mode (default PREP)
+                    frictionEngine.start(mode: .prep)
+                }
         }
     }
 }
@@ -41,5 +51,17 @@ final class SpeechTelemetryEngineWrapper: ObservableObject {
         }
         try? engine.start()
     }
+    deinit { engine.stop() }
+}
+
+final class FrictionCoachEngineWrapper: ObservableObject {
+    private let engine = FrictionCoachEngine()
+    @Published var lastPrompt: String = ""
+    func start(mode: FrictionCoachEngine.Mode = .prep) {
+        engine.start(mode: mode) { [weak self] phrase in
+            DispatchQueue.main.async { self?.lastPrompt = phrase }
+        }
+    }
+    func stop() { engine.stop() }
     deinit { engine.stop() }
 }

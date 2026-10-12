@@ -1,0 +1,28 @@
+{
+  "name": "ExecCommuteCoach",
+  "subtitle": "Executive Commute Articulation Coach",
+  "primaryCategory": "Utilities",
+  "secondaryCategory": "Education",
+  "keywords": ["speech", "coach", "carplay", "executive", "communication", "AI"],
+  "description": "ExecCommuteCoach is an acoustic‑first, eyes‑free verbal coaching app for commuters, providing pitch telemetry, filler detection, WPM tracking, and dynamic friction prompts to sharpen executive communication skills.",
+  "privacyPolicyURL": "https://yourdomain.com/privacy",
+  "copyright": "2026 A. Alex Mohit",
+  "reviewContact": {
+    "name": "Alex Mohit",
+    "email": "mohalex@gmail.com",
+    "phone": "+12066795710"
+  },
+  "pricingTier": 2,
+  "app_identity": {
+    "bundle_id": "com.alexmohit825.ExecCommuteCoach",
+    "sku": "ExecCommuteCoach",
+    "team_id": "523MJL63MC"
+  },
+  "version_metadata": {
+    "description": "ExecCommuteCoach is an acoustic‑first, eyes‑free verbal coaching app for commuters, providing pitch telemetry, filler detection, WPM tracking, and dynamic friction prompts to sharpen executive communication skills.",
+    "keywords": "speech,coach,carplay,executive,communication,AI",
+    "support_url": "https://yourdomain.com/support",
+    "marketing_url": "https://yourdomain.com",
+    "promotional_text": ""
+  }
+}

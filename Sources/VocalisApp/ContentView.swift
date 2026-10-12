@@ -2,7 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var acoustic: AcousticTelemetryEngineWrapper
-    @EnvironmentObject var speech: SpeechTelemetryEngineWrapper
+@EnvironmentObject var speech: SpeechTelemetryEngineWrapper
+@EnvironmentObject var friction: FrictionCoachEngineWrapper
     
     var body: some View {
         VStack(spacing: 20) {
@@ -26,6 +27,14 @@ struct ContentView: View {
                     Spacer()
                     Text(speech.lastFiller)
                         .foregroundColor(.orange)
+                }
+            }
+            if !friction.lastPrompt.isEmpty {
+                HStack {
+                    Text("Coach Prompt:")
+                    Spacer()
+                    Text(friction.lastPrompt)
+                        .foregroundColor(.red)
                 }
             }
             Spacer()
