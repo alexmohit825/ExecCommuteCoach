@@ -5,9 +5,13 @@ let package = Package(
     name: "ExecCommuteCoach",
     platforms: [.iOS(.v16)],
     products: [
-        .executable(
+        .iOSApplication(
             name: "Vocalis",
-            targets: ["VocalisApp"]
+            targets: ["VocalisApp"],
+            bundleIdentifier: "com.alexmohit825.ExecCommuteCoach",
+            teamIdentifier: "523MJL63MC",
+            displayVersion: "1.0",
+            bundleVersion: "1"
         )
     ],
     targets: [
