@@ -15,9 +15,8 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     var onWPMUpdate: ((Int) -> Void)?
     
     override init() {
-        // On‑device recognizer for offline use.
+        // On‑device recognition is requested per-request (see start()).
         if let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) {
-            recognizer.requiresOnDeviceRecognition = true
             self.recognizer = recognizer
         } else {
             fatalError("Failed to create SFSpeechRecognizer")
@@ -27,18 +26,19 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     }
     
     func start() throws {
-        // Request microphone permission if needed.
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-        
+        // Audio session is configured once by CarAudioDirector (playAndRecord).
         request = SFSpeechAudioBufferRecognitionRequest()
         guard let request = request else { throw NSError(domain: "SpeechTelemetry", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to create request"]) }
         request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = true
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+        }
         
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
+        guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+            throw NSError(domain: "SpeechTelemetry", code: -2, userInfo: [NSLocalizedDescriptionKey: "No valid microphone input format"])
+        }
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             request.append(buffer)
         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Speech
 
 @main
 struct VocalisApp: App {
@@ -49,19 +50,10 @@ final class SpeechTelemetryEngineWrapper: ObservableObject {
         engine.onWPMUpdate = { [weak self] wpm in
             DispatchQueue.main.async { self?.wpm = wpm }
         }
-        try? engine.start()
-    }
-    deinit { engine.stop() }
-}
-
-final class FrictionCoachEngineWrapper: ObservableObject {
-    private let engine = FrictionCoachEngine()
-    @Published var lastPrompt: String = ""
-    func start(mode: FrictionCoachEngine.Mode = .prep) {
-        engine.start(mode: mode) { [weak self] phrase in
-            DispatchQueue.main.async { self?.lastPrompt = phrase }
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            guard status == .authorized else { return }
+            DispatchQueue.main.async { try? self?.engine.start() }
         }
     }
-    func stop() { engine.stop() }
     deinit { engine.stop() }
 }

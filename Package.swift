@@ -1,23 +1,16 @@
 // swift-tools-version:5.9
+// NOTE: The iOS app / TestFlight build is produced from project.yml (XcodeGen),
+// not from this manifest. This manifest is kept only for source organisation.
 import PackageDescription
 
 let package = Package(
     name: "ExecCommuteCoach",
     platforms: [.iOS(.v16)],
-    products: [
-        .iOSApplication(
-            name: "Vocalis",
-            targets: ["VocalisApp"],
-            bundleIdentifier: "com.alexmohit825.ExecCommuteCoach",
-            teamIdentifier: "523MJL63MC",
-            displayVersion: "1.0",
-            bundleVersion: "1"
-        )
-    ],
     targets: [
         .executableTarget(
             name: "VocalisApp",
-            path: "Sources/VocalisApp"
+            path: "Sources/VocalisApp",
+            exclude: ["Info.plist", "Assets.xcassets"]
         ),
         .testTarget(
             name: "VocalisTests",

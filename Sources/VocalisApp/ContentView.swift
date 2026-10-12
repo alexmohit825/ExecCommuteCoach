@@ -7,7 +7,7 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Vocalis – Executive Commute Coach")
+            Text("ExecCommuteCoach")
                 .font(.title2).bold()
             HStack {
                 Text("Fundamental Frequency:")
@@ -51,5 +51,6 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
             .environmentObject(AcousticTelemetryEngineWrapper())
             .environmentObject(SpeechTelemetryEngineWrapper())
+            .environmentObject(FrictionCoachEngineWrapper())
     }
 }
