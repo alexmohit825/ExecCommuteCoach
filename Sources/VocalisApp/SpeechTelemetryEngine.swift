@@ -3,7 +3,7 @@
 import Speech
 import AVFoundation
 
-public enum CadenceZone: String {
+enum CadenceZone: String {
     case slow = "Slow & Deliberate"
     case optimal = "Optimal Executive"
     case rushing = "Rushing"
@@ -21,7 +21,7 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     private var isRunning: Bool = false
     
     // Comprehensive Speeko / Well-Spoken filler words catalog
-    public static let standardFillers: Set<String> = [
+    static let standardFillers: Set<String> = [
         "um", "uh", "like", "you know", "actually", "basically",
         "literally", "sort of", "kind of", "i mean", "honestly", "frankly"
     ]

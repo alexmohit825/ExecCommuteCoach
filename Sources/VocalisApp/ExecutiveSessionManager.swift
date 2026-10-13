@@ -4,19 +4,19 @@ import Foundation
 import SwiftUI
 import Combine
 
-public struct SessionDebrief: Identifiable, Codable {
-    public var id = UUID()
-    public let timestamp: Date
-    public let durationSeconds: Int
-    public let totalWords: Int
-    public let averageWPM: Int
-    public let fillerCount: Int
-    public let fillerBreakdown: [String: Int]
-    public let readinessScore: Int
-    public let cadenceGrade: String
-    public let pitchRangeHz: Float
-    public let frameworkName: String
-    public let transcriptSnippet: String
+struct SessionDebrief: Identifiable, Codable {
+    var id = UUID()
+    let timestamp: Date
+    let durationSeconds: Int
+    let totalWords: Int
+    let averageWPM: Int
+    let fillerCount: Int
+    let fillerBreakdown: [String: Int]
+    let readinessScore: Int
+    let cadenceGrade: String
+    let pitchRangeHz: Float
+    let frameworkName: String
+    let transcriptSnippet: String
 }
 
 @MainActor
@@ -216,7 +216,7 @@ final class ExecutiveSessionManager: ObservableObject {
     }
     
     // MARK: - Scoring Algorithm (Speeko & Well-Spoken Synthesis)
-    public func calculateReadinessScore() -> Int {
+    func calculateReadinessScore() -> Int {
         var score = 100
         
         // 1. Cadence Penalty (Target: 130-165 WPM)

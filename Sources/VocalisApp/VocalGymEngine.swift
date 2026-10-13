@@ -3,14 +3,14 @@
 import Foundation
 import SwiftUI
 
-public enum BreathingMode: String, CaseIterable, Identifiable {
+enum BreathingMode: String, CaseIterable, Identifiable {
     case box = "Box (4-4-4-4)"
     case calm = "Executive Reset (4-7-8)"
     case commute = "Drive Pulse (3-3-6)"
     
-    public var id: String { rawValue }
+    var id: String { rawValue }
     
-    public var intervals: (inhale: Double, hold1: Double, exhale: Double, hold2: Double) {
+    var intervals: (inhale: Double, hold1: Double, exhale: Double, hold2: Double) {
         switch self {
         case .box: return (4.0, 4.0, 4.0, 4.0)
         case .calm: return (4.0, 7.0, 8.0, 0.0)
@@ -19,20 +19,20 @@ public enum BreathingMode: String, CaseIterable, Identifiable {
     }
 }
 
-public enum BreathingPhase: String {
+enum BreathingPhase: String {
     case inhale = "Inhale Deeply"
     case hold = "Hold Presence"
     case exhale = "Release & Ground"
     case rest = "Stillness"
 }
 
-public struct ArticulationDrill: Identifiable {
-    public let id = UUID()
-    public let title: String
-    public let phoneticTarget: String
-    public let prompt: String
-    public let difficulty: String
-    public let executiveBenefit: String
+struct ArticulationDrill: Identifiable {
+    let id = UUID()
+    let title: String
+    let phoneticTarget: String
+    let prompt: String
+    let difficulty: String
+    let executiveBenefit: String
 }
 
 final class VocalGymEngine: ObservableObject {

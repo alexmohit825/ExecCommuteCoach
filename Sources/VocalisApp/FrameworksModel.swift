@@ -2,33 +2,33 @@
 // Executive communication frameworks inspired by Oratey (PREP, STAR, Pyramid Principle, Adversarial Scrutiny).
 import Foundation
 
-public struct FrameworkStep: Identifiable, Hashable {
-    public let id = UUID()
-    public let title: String
-    public let guidance: String
-    public let promptCue: String
-    public let targetSeconds: Int
+struct FrameworkStep: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let guidance: String
+    let promptCue: String
+    let targetSeconds: Int
 }
 
-public struct ExecutiveFramework: Identifiable, Hashable {
-    public let id: String
-    public let name: String
-    public let acronym: String
-    public let category: String
-    public let overview: String
-    public let steps: [FrameworkStep]
+struct ExecutiveFramework: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let acronym: String
+    let category: String
+    let overview: String
+    let steps: [FrameworkStep]
     
-    public static func == (lhs: ExecutiveFramework, rhs: ExecutiveFramework) -> Bool {
+    static func == (lhs: ExecutiveFramework, rhs: ExecutiveFramework) -> Bool {
         lhs.id == rhs.id
     }
     
-    public func hash(into hasher: inout Hasher) {
+    func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
 
-public enum FrameworkCatalog {
-    public static let all: [ExecutiveFramework] = [
+enum FrameworkCatalog {
+    static let all: [ExecutiveFramework] = [
         ExecutiveFramework(
             id: "prep",
             name: "PREP Method",

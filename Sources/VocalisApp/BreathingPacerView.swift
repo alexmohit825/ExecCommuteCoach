@@ -2,14 +2,14 @@
 // Diaphragmatic breathing pacer visualizer with glowing expanding rings (Speak-Up archetype).
 import SwiftUI
 
-public struct BreathingPacerView: View {
+struct BreathingPacerView: View {
     @ObservedObject var gym: VocalGymEngine
     
-    public init(gym: VocalGymEngine) {
+    init(gym: VocalGymEngine) {
         self.gym = gym
     }
     
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 24) {
             // Mode selector pill
             Picker("Mode", selection: $gym.breathingMode) {

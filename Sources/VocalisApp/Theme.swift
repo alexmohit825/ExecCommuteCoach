@@ -2,25 +2,25 @@
 // ExecCommuteCoach Executive Design System (Inspired by Well-Spoken & Speeko)
 import SwiftUI
 
-public enum AppTheme {
+enum AppTheme {
     // MARK: - Color Palette
-    public static let background = Color(red: 0.04, green: 0.05, blue: 0.08)       // #0A0D14 Midnight Obsidian
-    public static let surface = Color(red: 0.08, green: 0.10, blue: 0.15)          // #141A26 Elevated Charcoal
-    public static let surfaceLight = Color(red: 0.12, green: 0.15, blue: 0.22)     // #1F2638 Glass Rim
+    static let background = Color(red: 0.04, green: 0.05, blue: 0.08)       // #0A0D14 Midnight Obsidian
+    static let surface = Color(red: 0.08, green: 0.10, blue: 0.15)          // #141A26 Elevated Charcoal
+    static let surfaceLight = Color(red: 0.12, green: 0.15, blue: 0.22)     // #1F2638 Glass Rim
     
     // Accents
-    public static let executiveGold = Color(red: 0.86, green: 0.72, blue: 0.38)    // #DDB861 Champagne Gold
-    public static let cyberCyan = Color(red: 0.00, green: 0.85, blue: 0.95)        // #00D9F2 Electric Cyan
-    public static let emeraldGreen = Color(red: 0.15, green: 0.82, blue: 0.55)     // #26D18C Cadence Green
-    public static let coralAlert = Color(red: 0.98, green: 0.38, blue: 0.38)       // #FA6161 Filler Warning
-    public static let electricIndigo = Color(red: 0.45, green: 0.35, blue: 0.95)   // #7359F2 Framework Accent
+    static let executiveGold = Color(red: 0.86, green: 0.72, blue: 0.38)    // #DDB861 Champagne Gold
+    static let cyberCyan = Color(red: 0.00, green: 0.85, blue: 0.95)        // #00D9F2 Electric Cyan
+    static let emeraldGreen = Color(red: 0.15, green: 0.82, blue: 0.55)     // #26D18C Cadence Green
+    static let coralAlert = Color(red: 0.98, green: 0.38, blue: 0.38)       // #FA6161 Filler Warning
+    static let electricIndigo = Color(red: 0.45, green: 0.35, blue: 0.95)   // #7359F2 Framework Accent
     
-    public static let textPrimary = Color.white
-    public static let textSecondary = Color(white: 0.65)
-    public static let textTertiary = Color(white: 0.42)
+    static let textPrimary = Color.white
+    static let textSecondary = Color(white: 0.65)
+    static let textTertiary = Color(white: 0.42)
     
     // MARK: - Gradients
-    public static let backgroundGradient = LinearGradient(
+    static let backgroundGradient = LinearGradient(
         colors: [
             Color(red: 0.04, green: 0.05, blue: 0.09),
             Color(red: 0.06, green: 0.07, blue: 0.12),
@@ -30,19 +30,19 @@ public enum AppTheme {
         endPoint: .bottomTrailing
     )
     
-    public static let goldGradient = LinearGradient(
+    static let goldGradient = LinearGradient(
         colors: [Color(red: 0.95, green: 0.82, blue: 0.48), Color(red: 0.75, green: 0.60, blue: 0.28)],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
-    public static let cyanGradient = LinearGradient(
+    static let cyanGradient = LinearGradient(
         colors: [Color(red: 0.00, green: 0.92, blue: 1.00), Color(red: 0.00, green: 0.60, blue: 0.90)],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
-    public static let cardGlass = LinearGradient(
+    static let cardGlass = LinearGradient(
         colors: [
             Color.white.opacity(0.08),
             Color.white.opacity(0.02)

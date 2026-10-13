@@ -2,20 +2,20 @@
 // Live animated multi-band fluid waveform visualizer (Well-Spoken executive aesthetic).
 import SwiftUI
 
-public struct LiveWaveformView: View {
-    public let spectralBands: [Float]
-    public let audioPower: Float
-    public let isActive: Bool
+struct LiveWaveformView: View {
+    let spectralBands: [Float]
+    let audioPower: Float
+    let isActive: Bool
     
     @State private var phase: CGFloat = 0
     
-    public init(spectralBands: [Float], audioPower: Float, isActive: Bool) {
+    init(spectralBands: [Float], audioPower: Float, isActive: Bool) {
         self.spectralBands = spectralBands
         self.audioPower = audioPower
         self.isActive = isActive
     }
     
-    public var body: some View {
+    var body: some View {
         ZStack {
             // Ambient glow backing
             RoundedRectangle(cornerRadius: 24, style: .continuous)

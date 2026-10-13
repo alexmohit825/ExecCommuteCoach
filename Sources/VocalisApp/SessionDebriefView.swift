@@ -2,16 +2,16 @@
 // Comprehensive post-session executive scorecard inspired by Speeko and Oratey.
 import SwiftUI
 
-public struct SessionDebriefView: View {
-    public let debrief: SessionDebrief
-    public let onDismiss: () -> Void
+struct SessionDebriefView: View {
+    let debrief: SessionDebrief
+    let onDismiss: () -> Void
     
-    public init(debrief: SessionDebrief, onDismiss: @escaping () -> Void) {
+    init(debrief: SessionDebrief, onDismiss: @escaping () -> Void) {
         self.debrief = debrief
         self.onDismiss = onDismiss
     }
     
-    public var body: some View {
+    var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             

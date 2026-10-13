@@ -7,7 +7,7 @@ final class FrictionCoachEngine {
     private var interruptionCallback: ((String) -> Void)?
     private var isRunning: Bool = false
     
-    public static let standardInterruptions: [String] = [
+    static let standardInterruptions: [String] = [
         "What’s the downside risk?",
         "Can you quantify the ROI in under 15 seconds?",
         "Bottom-line it for me.",
