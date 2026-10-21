@@ -28,6 +28,7 @@ targets:
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Apple Distribution"
         PROVISIONING_PROFILE_SPECIFIER: "ExecCommuteCoach AppStore CI"
+        CODE_SIGN_ENTITLEMENTS: Vocalis.entitlements
 schemes:
   ExecCommuteCoach:
     build:

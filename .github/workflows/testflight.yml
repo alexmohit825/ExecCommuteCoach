@@ -83,6 +83,13 @@ jobs:
             > archive.log 2>&1 || { echo "::group::errors"; grep -E "error:|error -" archive.log | head -60; echo "::endgroup::"; tail -60 archive.log; exit 1; }
           tail -5 archive.log
 
+      - name: Assert Embedded CarPlay Entitlements (Anti-Leap 7)
+        run: |
+          codesign -d --entitlements :- "$ARCHIVE_PATH/Products/Applications/ExecCommuteCoach.app" | tee archive_entitlements.xml
+          grep -q "com.apple.developer.carplay-audio" archive_entitlements.xml || { echo "❌ Missing carplay-audio entitlement in compiled binary!"; exit 1; }
+          grep -q "com.apple.developer.carplay-voice-based-conversation" archive_entitlements.xml || { echo "❌ Missing carplay-voice-based-conversation entitlement in compiled binary!"; exit 1; }
+          echo "✅ CarPlay Audio and Voice-Based Conversation successfully embedded in binary!"
+
       - name: Export IPA
         run: |
           set -o pipefail
