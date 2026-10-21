@@ -5,7 +5,7 @@ import Speech
 
 @main
 struct VocalisApp: App {
-    @StateObject private var sessionManager = ExecutiveSessionManager()
+    @StateObject private var sessionManager = ExecutiveSessionManager.shared
     
     init() {
         try? CarAudioDirector.shared.configureSession()

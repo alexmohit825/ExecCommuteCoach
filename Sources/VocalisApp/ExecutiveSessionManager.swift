@@ -21,6 +21,8 @@ struct SessionDebrief: Identifiable, Codable {
 
 @MainActor
 final class ExecutiveSessionManager: ObservableObject {
+    static let shared = ExecutiveSessionManager()
+    
     // MARK: - Engines
     private var acousticEngine: AcousticTelemetryEngine?
     private let speechEngine = SpeechTelemetryEngine()
