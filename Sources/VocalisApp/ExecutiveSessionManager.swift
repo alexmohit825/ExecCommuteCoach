@@ -255,7 +255,7 @@ final class ExecutiveSessionManager: ObservableObject {
         
         let snippet = String(liveTranscript.prefix(200))
         
-        var debrief = SessionDebrief(
+        let debrief = SessionDebrief(
             timestamp: Date(),
             durationSeconds: max(1, sessionDuration),
             totalWords: words,

@@ -30,6 +30,7 @@ enum BoardroomPersona: String, CaseIterable, Identifiable {
     }
 }
 
+@MainActor
 final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = AIAdversaryEngine()
     
@@ -90,8 +91,10 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
         // Interruption fires every 18 to 32 seconds
         let delay = Double.random(in: 18.0...32.0)
         timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-            guard let self = self, self.isRunning else { return }
-            self.triggerContextualPushback()
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isRunning else { return }
+                self.triggerContextualPushback()
+            }
         }
     }
     
@@ -118,19 +121,19 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self, self.isRunning else { return }
-            
             var challenge = ""
             if let data = data,
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let text = json["challenge"] as? String,
                !text.isEmpty {
                 challenge = text
-            } else {
-                challenge = Self.fallbackPrompts[self.activePersona]?.randomElement() ?? "What is the downside risk?"
             }
             
-            DispatchQueue.main.async {
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isRunning else { return }
+                if challenge.isEmpty {
+                    challenge = Self.fallbackPrompts[self.activePersona]?.randomElement() ?? "What is the downside risk?"
+                }
                 self.deliverChallenge(challenge)
                 self.scheduleNextPushback()
             }
@@ -148,7 +151,6 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
         utterance.pitchMultiplier = 0.98
         utterance.preUtteranceDelay = 0.1
         
-        // Select an authoritative natural English voice
         if let voice = AVSpeechSynthesisVoice(identifier: "com.apple.voice.compact.en-US.Samantha") ??
                        AVSpeechSynthesisVoice(language: "en-US") {
             utterance.voice = voice
