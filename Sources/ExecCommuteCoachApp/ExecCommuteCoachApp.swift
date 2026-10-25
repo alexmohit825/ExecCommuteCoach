@@ -1,10 +1,10 @@
-// VocalisApp.swift
+// ExecCommuteCoachApp.swift
 // ExecCommuteCoach Main Application Entry Point
 import SwiftUI
 import Speech
 
 @main
-struct VocalisApp: App {
+struct ExecCommuteCoachApp: App {
     @StateObject private var sessionManager = ExecutiveSessionManager.shared
     
     init() {

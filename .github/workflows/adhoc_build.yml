@@ -38,7 +38,6 @@ jobs:
       - name: Configure Ad-Hoc Profile & Dynamic Build Number
         run: |
           brew install xcodegen
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER: "ExecCommuteCoach AppStore CI"/PROVISIONING_PROFILE_SPECIFIER: "ExecCommuteCoach AdHoc Direct"/' project.yml
           sed -i '' 's/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: "${{ github.run_number }}"/' project.yml
           xcodegen generate
           ls -la
@@ -63,10 +62,17 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          
+          UUID=$(grep -A1 "<key>UUID</key>" "$PP_PATH" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' || true)
+          echo "Extracted Profile UUID: $UUID"
+          
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+          [ -n "$UUID" ] && cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+          [ -n "$UUID" ] && cp "$PP_PATH" ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/${UUID}.mobileprovision
 
       - name: Archive
         run: |
@@ -106,8 +112,8 @@ jobs:
       - name: Stage IPA to Cloudflare Worker OTA Installer (Pathway B)
         run: |
           IPA=$(ls "$EXPORT_PATH"/*.ipa | head -1)
-          echo "Staging $IPA to vocalis-coach Cloudflare Worker..."
-          curl -f -sS -X POST "https://vocalis-coach.mohalex.workers.dev/api/upload-ipa" \
+          echo "Staging $IPA to execcommute-coach Cloudflare Worker..."
+          curl -f -sS -X POST "https://execcommute-coach.mohalex.workers.dev/api/upload-ipa" \
             -H "Authorization: Bearer exec-commute-coach-secure-deploy-2026" \
             -H "Content-Type: application/octet-stream" \
             --data-binary @"$IPA"

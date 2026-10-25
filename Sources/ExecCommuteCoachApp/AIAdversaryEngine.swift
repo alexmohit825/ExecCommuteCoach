@@ -37,7 +37,7 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
     private var timer: Timer?
     private var isRunning: Bool = false
     private let speechSynthesizer = AVSpeechSynthesizer()
-    private let edgeEndpoint = URL(string: "https://vocalis-coach.mohalex.workers.dev/api/spar")!
+    private let edgeEndpoint = URL(string: "https://execcommute-coach.mohalex.workers.dev/api/spar")!
     
     var activePersona: BoardroomPersona = .cfo
     var onChallengeReceived: ((String) -> Void)?

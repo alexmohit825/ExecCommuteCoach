@@ -291,7 +291,7 @@ final class ExecutiveSessionManager: ObservableObject {
     
     private func fetchAIDebrief(transcript: String, wpm: Int, fillers: Int, hedgings: Int) {
         guard !transcript.isEmpty else { return }
-        guard let url = URL(string: "https://vocalis-coach.mohalex.workers.dev/api/debrief") else { return }
+        guard let url = URL(string: "https://execcommute-coach.mohalex.workers.dev/api/debrief") else { return }
         
         var req = URLRequest(url: url)
         req.httpMethod = "POST"

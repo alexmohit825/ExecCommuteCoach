@@ -5,14 +5,19 @@
     <key>destination</key>
     <string>export</string>
     <key>method</key>
-    <string>ad-hoc</string>
+    <string>release-testing</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
     <key>stripSwiftSymbols</key>
     <true/>
     <key>teamID</key>
     <string>523MJL63MC</string>
     <key>compileBitcode</key>
     <false/>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.alexmohit825.ExecCommuteCoach</key>
+        <string>af5952da-b71a-4576-9f2f-d2ebbb3c99ad</string>
+    </dict>
 </dict>
 </plist>

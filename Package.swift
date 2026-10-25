@@ -8,13 +8,13 @@ let package = Package(
     platforms: [.iOS(.v16)],
     targets: [
         .executableTarget(
-            name: "VocalisApp",
-            path: "Sources/VocalisApp",
+            name: "ExecCommuteCoachApp",
+            path: "Sources/ExecCommuteCoachApp",
             exclude: ["Info.plist", "Assets.xcassets"]
         ),
         .testTarget(
-            name: "VocalisTests",
-            dependencies: ["VocalisApp"]
+            name: "ExecCommuteCoachTests",
+            dependencies: ["ExecCommuteCoachApp"]
         )
     ]
 )
