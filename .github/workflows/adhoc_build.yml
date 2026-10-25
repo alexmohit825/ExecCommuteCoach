@@ -63,16 +63,16 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           
-          UUID=$(grep -A1 "<key>UUID</key>" "$PP_PATH" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' || true)
-          echo "Extracted Profile UUID: $UUID"
+          UUID="af5952da-b71a-4576-9f2f-d2ebbb3c99ad"
+          echo "Profile UUID: $UUID"
           
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
-          [ -n "$UUID" ] && cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
           
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
-          [ -n "$UUID" ] && cp "$PP_PATH" ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/${UUID}.mobileprovision
+          cp "$PP_PATH" ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/${UUID}.mobileprovision
 
       - name: Archive
         run: |
