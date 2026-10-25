@@ -1,5 +1,5 @@
 // CarPlaySceneDelegate.swift
-// Native Apple CarPlay Scene Delegate for ExecCommuteCoach
+// Native Apple CarPlay Scene Delegate for ExecCommuteCoach 2.0
 import Foundation
 import CarPlay
 import UIKit
@@ -16,22 +16,25 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     ) {
         self.interfaceController = interfaceController
         
-        // Ensure CarAudioDirector configures duplex cabin Bluetooth / CarPlay audio
         try? CarAudioDirector.shared.configureSession()
 
         let rootTemplate = buildCarPlayRootTemplate()
         interfaceController.setRootTemplate(rootTemplate, animated: true, completion: nil)
 
         // Observe session updates to refresh dashboard telemetry
-        ExecutiveSessionManager.shared.$isSessionActive
-            .combineLatest(ExecutiveSessionManager.shared.$liveWPM, ExecutiveSessionManager.shared.$totalFillers)
-            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
-            .sink { [weak self] _, _, _ in
-                guard let self = self, let ic = self.interfaceController else { return }
-                let updatedRoot = self.buildCarPlayRootTemplate()
-                ic.setRootTemplate(updatedRoot, animated: false, completion: nil)
-            }
-            .store(in: &cancellables)
+        Publishers.CombineLatest4(
+            ExecutiveSessionManager.shared.$isSessionActive,
+            ExecutiveSessionManager.shared.$liveWPM,
+            ExecutiveSessionManager.shared.$totalFillers,
+            ExecutiveSessionManager.shared.$totalHedgings
+        )
+        .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+        .sink { [weak self] _, _, _, _ in
+            guard let self = self, let ic = self.interfaceController else { return }
+            let updatedRoot = self.buildCarPlayRootTemplate()
+            ic.setRootTemplate(updatedRoot, animated: false, completion: nil)
+        }
+        .store(in: &cancellables)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
@@ -55,8 +58,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         let mainControlItem = CPListItem(
             text: sessionActive ? "⏹️ End Coaching & Review Scorecard" : "🎙️ Start Commute Voice Coaching",
             detailText: sessionActive
-                ? "\(session.liveWPM) WPM • \(session.totalFillers) Fillers • \(session.selectedFramework.name)"
-                : "Eyes-Free Verbal Coaching • Tap to begin"
+                ? "\(session.liveWPM) WPM • \(session.totalFillers) Fillers • \(session.totalHedgings) Hedges"
+                : "Hands-Free Executive Coaching • Tap to begin"
         )
         mainControlItem.handler = { [weak self] _, completion in
             Task { @MainActor in
@@ -75,14 +78,14 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         if sessionActive {
             let statusItem = CPListItem(
                 text: "Cadence: \(session.liveWPM) WPM (\(session.cadenceZone.rawValue))",
-                detailText: "Fillers: \(session.totalFillers) | Pitch: \(String(format: "%.0f Hz", session.fundamentalPitchHz))"
+                detailText: "\(session.totalFillers) Fillers • \(session.totalHedgings) Hedges • \(session.strategicPauses) Pauses"
             )
             liveItems.append(statusItem)
             
             if !session.activeFrictionAlert.isEmpty {
                 let pushbackItem = CPListItem(
-                    text: "⚡ Pushback: \(session.activeFrictionAlert)",
-                    detailText: "Stay calm • Maintain chest resonance"
+                    text: "⚡ \(session.activePersona.rawValue): \(session.activeFrictionAlert)",
+                    detailText: "Hold steady cadence • Address directly"
                 )
                 liveItems.append(pushbackItem)
             }
@@ -90,7 +93,25 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         
         sections.append(CPListSection(items: liveItems, header: "Commute Speech Telemetry", sectionIndexTitle: nil))
 
-        // 2. Executive Frameworks (Oratey)
+        // 2. AI Boardroom Personas
+        let personaItems: [CPListItem] = BoardroomPersona.allCases.map { persona in
+            let isSelected = session.activePersona == persona
+            let item = CPListItem(
+                text: isSelected ? "✓ \(persona.rawValue)" : persona.rawValue,
+                detailText: persona.subtitle
+            )
+            item.handler = { [weak self] _, completion in
+                Task { @MainActor in
+                    session.activePersona = persona
+                    completion()
+                    self?.refreshTemplate()
+                }
+            }
+            return item
+        }
+        sections.append(CPListSection(items: personaItems, header: "AI Sparring Persona", sectionIndexTitle: nil))
+
+        // 3. Executive Frameworks (Oratey)
         let frameworkItems: [CPListItem] = FrameworkCatalog.all.map { framework in
             let isSelected = session.selectedFramework.id == framework.id
             let item = CPListItem(
@@ -108,29 +129,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
         sections.append(CPListSection(items: frameworkItems, header: "Executive Frameworks", sectionIndexTitle: nil))
 
-        // 3. Quick Vocal Drills (Speak-Up)
-        let pushbackItem = CPListItem(
-            text: "⚡ Trigger Boardroom Pushback",
-            detailText: "Simulate immediate executive interruption"
-        )
-        pushbackItem.handler = { [weak self] _, completion in
-            Task { @MainActor in
-                session.selectedFramework = FrameworkCatalog.all.first(where: { $0.id == "friction" }) ?? session.selectedFramework
-                if !session.isSessionActive {
-                    session.startSession()
-                }
-                completion()
-                self?.refreshTemplate()
-            }
-        }
-        
-        sections.append(CPListSection(items: [pushbackItem], header: "Stress-Test Drills", sectionIndexTitle: nil))
-
-        let listTemplate = CPListTemplate(
-            title: "ExecCommuteCoach",
-            sections: sections
-        )
-        return listTemplate
+        let template = CPListTemplate(title: "ExecCommuteCoach", sections: sections)
+        return template
     }
 
     private func refreshTemplate() {

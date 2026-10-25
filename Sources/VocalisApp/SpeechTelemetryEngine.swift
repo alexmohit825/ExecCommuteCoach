@@ -1,5 +1,5 @@
 // SpeechTelemetryEngine.swift
-// Real-time speech analysis, comprehensive filler-word detection, and cadence tracking.
+// Real-time speech analysis, comprehensive filler-word detection, hedging radar, and pause architecture.
 import Speech
 import AVFoundation
 
@@ -26,14 +26,27 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
         "literally", "sort of", "kind of", "i mean", "honestly", "frankly"
     ]
     
+    // Executive Presence 2.0: Hedging & Weak Language Radar
+    static let standardHedgings: Set<String> = [
+        "i think", "maybe", "hopefully", "in my opinion", "we could try",
+        "might be", "just", "sorry to interrupt", "i could be wrong",
+        "excuse me if", "somewhat", "presumably", "if that makes sense"
+    ]
+    
     // Callbacks
     var onTranscriptUpdate: ((String) -> Void)?
     var onWPMUpdate: ((Int, CadenceZone) -> Void)?
     var onFillerDetected: ((String, Int, [String: Int]) -> Void)? // (lastFiller, totalFillers, breakdown)
+    var onHedgingDetected: ((String, Int, [String: Int]) -> Void)? // (lastHedge, totalHedging, breakdown)
+    var onPauseMetricsUpdate: ((Int, Int) -> Void)? // (strategicPauses, hesitationStalls)
     
     // Metrics
     private(set) var totalFillersDetected: Int = 0
     private(set) var fillerBreakdown: [String: Int] = [:]
+    private(set) var totalHedgingsDetected: Int = 0
+    private(set) var hedgingBreakdown: [String: Int] = [:]
+    private(set) var strategicPauses: Int = 0
+    private(set) var hesitationStalls: Int = 0
     private(set) var currentWPM: Int = 0
     private(set) var fullTranscript: String = ""
     
@@ -76,6 +89,10 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
         wordCount = 0
         totalFillersDetected = 0
         fillerBreakdown.removeAll()
+        totalHedgingsDetected = 0
+        hedgingBreakdown.removeAll()
+        strategicPauses = 0
+        hesitationStalls = 0
         fullTranscript = ""
         
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
@@ -90,32 +107,77 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
                 let tokens = lower.components(separatedBy: CharacterSet.whitespacesAndNewlines).filter { !$0.isEmpty }
                 self.wordCount = tokens.count
                 
-                // 1. Check for single-word & multi-word fillers
-                var newBreakdown: [String: Int] = [:]
-                var total = 0
+                // 1. Fillers Analysis
+                var newFillerBreakdown: [String: Int] = [:]
+                var fillerTotal = 0
                 for filler in Self.standardFillers {
                     let count = self.countOccurrences(of: filler, in: lower)
                     if count > 0 {
-                        newBreakdown[filler] = count
-                        total += count
+                        newFillerBreakdown[filler] = count
+                        fillerTotal += count
                     }
                 }
                 
-                if total > self.totalFillersDetected {
-                    // Find what triggered the increment
+                if fillerTotal > self.totalFillersDetected {
                     var latest = "filler"
-                    for (k, v) in newBreakdown {
+                    for (k, v) in newFillerBreakdown {
                         if v > (self.fillerBreakdown[k] ?? 0) {
                             latest = k
                             break
                         }
                     }
-                    self.totalFillersDetected = total
-                    self.fillerBreakdown = newBreakdown
-                    self.onFillerDetected?(latest, total, newBreakdown)
+                    self.totalFillersDetected = fillerTotal
+                    self.fillerBreakdown = newFillerBreakdown
+                    self.onFillerDetected?(latest, fillerTotal, newFillerBreakdown)
                 }
                 
-                // 2. Rolling WPM & Cadence Zone
+                // 2. Hedging & Weak Language Radar
+                var newHedgeBreakdown: [String: Int] = [:]
+                var hedgeTotal = 0
+                for hedge in Self.standardHedgings {
+                    let count = self.countOccurrences(of: hedge, in: lower)
+                    if count > 0 {
+                        newHedgeBreakdown[hedge] = count
+                        hedgeTotal += count
+                    }
+                }
+                
+                if hedgeTotal > self.totalHedgingsDetected {
+                    var latestHedge = "qualifier"
+                    for (k, v) in newHedgeBreakdown {
+                        if v > (self.hedgingBreakdown[k] ?? 0) {
+                            latestHedge = k
+                            break
+                        }
+                    }
+                    self.totalHedgingsDetected = hedgeTotal
+                    self.hedgingBreakdown = newHedgeBreakdown
+                    self.onHedgingDetected?(latestHedge, hedgeTotal, newHedgeBreakdown)
+                }
+                
+                // 3. Pause Architecture via Transcription Segments
+                let segments = result.bestTranscription.segments
+                if segments.count > 1 {
+                    var strat = 0
+                    var stall = 0
+                    for i in 0..<(segments.count - 1) {
+                        let currentEnd = segments[i].timestamp + segments[i].duration
+                        let nextStart = segments[i + 1].timestamp
+                        let gap = nextStart - currentEnd
+                        if gap >= 0.75 && gap <= 2.2 {
+                            strat += 1
+                        } else if gap > 2.5 {
+                            stall += 1
+                        }
+                    }
+                    if strat != self.strategicPauses || stall != self.hesitationStalls {
+                        self.strategicPauses = strat
+                        self.hesitationStalls = stall
+                        self.onPauseMetricsUpdate?(strat, stall)
+                    }
+                }
+                
+                // 4. Rolling WPM & Cadence Zone
                 if let start = self.sessionStartTime {
                     let elapsedMinutes = Date().timeIntervalSince(start) / 60.0
                     if elapsedMinutes > 0.05 { // Wait 3 seconds for stabilization
@@ -136,7 +198,6 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
             }
             
             if let error = error {
-                // If cancelled normally on stop, ignore error
                 if (error as NSError).code != 216 {
                     print("Speech telemetry observation: \(error.localizedDescription)")
                 }
@@ -150,7 +211,6 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
         var count = 0
         var searchRange = text.startIndex..<text.endIndex
         while let range = text.range(of: target, options: .caseInsensitive, range: searchRange) {
-            // Verify word boundary around matches
             let before = range.lowerBound == text.startIndex || text[text.index(before: range.lowerBound)].isWhitespace
             let after = range.upperBound == text.endIndex || text[range.upperBound].isWhitespace || text[range.upperBound].isPunctuation
             if before && after {

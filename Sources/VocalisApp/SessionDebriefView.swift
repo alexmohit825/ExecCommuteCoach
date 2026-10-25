@@ -1,5 +1,5 @@
 // SessionDebriefView.swift
-// Comprehensive post-session executive scorecard inspired by Speeko and Oratey.
+// Comprehensive post-session executive scorecard inspired by Speeko and Oratey, with Gemini 3.8 AI debriefing.
 import SwiftUI
 
 struct SessionDebriefView: View {
@@ -20,7 +20,7 @@ struct SessionDebriefView: View {
                     // Header
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("EXECUTIVE DEBRIEF")
+                            Text("EXECUTIVE DEBRIEF 2.0")
                                 .font(.system(size: 11, weight: .bold))
                                 .tracking(2)
                                 .foregroundColor(AppTheme.executiveGold)
@@ -37,7 +37,7 @@ struct SessionDebriefView: View {
                     }
                     .padding(.top, 16)
                     
-                    // Score Card
+                    // Executive Score Card
                     VStack(spacing: 12) {
                         Text("Executive Readiness Score")
                             .font(.subheadline)
@@ -49,7 +49,7 @@ struct SessionDebriefView: View {
                                 debrief.readinessScore >= 80 ? AppTheme.goldGradient : AppTheme.cyanGradient
                             )
                         
-                        Text(debrief.readinessScore >= 80 ? "Boardroom Ready" : "High Potential · Refine Delivery")
+                        Text(debrief.readinessScore >= 80 ? "Boardroom Ready · High Authority" : "Refine Pacing & Eliminate Hedging")
                             .font(.caption).bold()
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
@@ -61,9 +61,28 @@ struct SessionDebriefView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
-                    .glassCard(strokeColor: AppTheme.executiveGold.opacity(0.3))
+                    .glassCard(strokeColor: AppTheme.executiveGold.opacity(0.35))
                     
-                    // 4-Quadrant Metric Grid
+                    // AI Executive Briefing Card (Gemini 3.8 Flash)
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(AppTheme.executiveGold)
+                            Text("AI Executive Intelligence Verdict")
+                                .font(.subheadline).bold()
+                                .foregroundColor(AppTheme.executiveGold)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 10) {
+                            DebriefBullet(icon: "shield.checkmark.fill", color: AppTheme.emeraldGreen, title: "Verdict", text: debrief.aiVerdict)
+                            DebriefBullet(icon: "anchor.fill", color: AppTheme.cyberCyan, title: "Strongest Anchor", text: debrief.aiAnchor)
+                            DebriefBullet(icon: "exclamationmark.triangle.fill", color: AppTheme.coralAlert, title: "Fatal Flaw to Scrub", text: debrief.aiFlaw)
+                        }
+                    }
+                    .padding(18)
+                    .glassCard(strokeColor: AppTheme.executiveGold.opacity(0.25))
+                    
+                    // 6-Quadrant Metric Grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                         MetricTile(
                             title: "Average Cadence",
@@ -74,28 +93,78 @@ struct SessionDebriefView: View {
                         )
                         
                         MetricTile(
-                            title: "Fillers Detected",
+                            title: "Fillers Flagged",
                             value: "\(debrief.fillerCount)",
-                            subtitle: debrief.fillerCount == 0 ? "Flawless Eloquence" : "\(debrief.fillerCount) crutches flagged",
+                            subtitle: debrief.fillerCount == 0 ? "Zero Verbal Crutches" : "\(debrief.fillerCount) fillers detected",
                             color: debrief.fillerCount == 0 ? AppTheme.emeraldGreen : AppTheme.coralAlert,
                             icon: "waveform.badge.exclamationmark"
                         )
                         
                         MetricTile(
-                            title: "Vocal Range",
-                            value: String(format: "%.0f Hz", debrief.pitchRangeHz),
-                            subtitle: debrief.pitchRangeHz > 25 ? "Dynamic & Engaging" : "Monotone Risk",
+                            title: "Hedging Phrases",
+                            value: "\(debrief.hedgingCount)",
+                            subtitle: debrief.hedgingCount == 0 ? "Decisive & Confident" : "\(debrief.hedgingCount) qualifiers found",
+                            color: debrief.hedgingCount == 0 ? AppTheme.emeraldGreen : AppTheme.coralAlert,
+                            icon: "shield.slash.fill"
+                        )
+                        
+                        MetricTile(
+                            title: "Strategic Pauses",
+                            value: "\(debrief.strategicPauses)",
+                            subtitle: "\(debrief.hesitationStalls) stalls recorded",
                             color: AppTheme.cyberCyan,
+                            icon: "pause.circle.fill"
+                        )
+                        
+                        MetricTile(
+                            title: "Vocal Modulation",
+                            value: debrief.modulationGrade,
+                            subtitle: String(format: "±%.1f Hz dynamic range", debrief.pitchStdDev),
+                            color: AppTheme.electricIndigo,
                             icon: "tuningfork"
                         )
                         
                         MetricTile(
                             title: "Framework",
                             value: debrief.frameworkName,
-                            subtitle: "\(debrief.durationSeconds)s session",
-                            color: AppTheme.electricIndigo,
+                            subtitle: "\(debrief.durationSeconds)s duration",
+                            color: AppTheme.executiveGold,
                             icon: "square.stack.3d.up.fill"
                         )
+                    }
+                    
+                    // Hedging Language Breakdown Chips
+                    if !debrief.hedgingBreakdown.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Hedging & Weak Language Scrub")
+                                .font(.headline)
+                                .foregroundColor(AppTheme.textPrimary)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(debrief.hedgingBreakdown.sorted(by: { $0.value > $1.value }), id: \.key) { key, count in
+                                        HStack(spacing: 6) {
+                                            Text("\"\(key)\"")
+                                                .font(.subheadline).bold()
+                                                .foregroundColor(AppTheme.textPrimary)
+                                            Text("×\(count)")
+                                                .font(.caption).bold()
+                                                .foregroundColor(AppTheme.coralAlert)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(AppTheme.surface)
+                                        .cornerRadius(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(AppTheme.coralAlert.opacity(0.3), lineWidth: 1)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .glassCard()
                     }
                     
                     // Filler Words Breakdown Chips
@@ -134,7 +203,7 @@ struct SessionDebriefView: View {
                     
                     // Transcript Snippet
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Recorded Transcript Sample")
+                        Text("Recorded Speech Snippet")
                             .font(.headline)
                             .foregroundColor(AppTheme.textPrimary)
                         Text("\"\(debrief.transcriptSnippet)\"")
@@ -161,6 +230,31 @@ struct SessionDebriefView: View {
                     .padding(.bottom, 32)
                 }
                 .padding(.horizontal, 16)
+            }
+        }
+    }
+}
+
+private struct DebriefBullet: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let text: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.system(size: 14))
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption).bold()
+                    .foregroundColor(color)
+                Text(text)
+                    .font(.footnote)
+                    .foregroundColor(AppTheme.textPrimary)
+                    .lineSpacing(2)
             }
         }
     }

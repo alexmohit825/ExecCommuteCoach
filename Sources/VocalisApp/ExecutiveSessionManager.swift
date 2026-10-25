@@ -1,5 +1,5 @@
 // ExecutiveSessionManager.swift
-// Unified orchestrator combining Speeko telemetry, Speak-Up vocal drills, Well-Spoken executive presence, and Oratey frameworks.
+// Unified orchestrator combining Speeko telemetry, Speak-Up vocal drills, Well-Spoken presence, and Oratey frameworks.
 import Foundation
 import SwiftUI
 import Combine
@@ -12,11 +12,20 @@ struct SessionDebrief: Identifiable, Codable {
     let averageWPM: Int
     let fillerCount: Int
     let fillerBreakdown: [String: Int]
+    let hedgingCount: Int
+    let hedgingBreakdown: [String: Int]
+    let strategicPauses: Int
+    let hesitationStalls: Int
     let readinessScore: Int
     let cadenceGrade: String
     let pitchRangeHz: Float
+    let pitchStdDev: Float
+    let modulationGrade: String
     let frameworkName: String
     let transcriptSnippet: String
+    var aiVerdict: String
+    var aiAnchor: String
+    var aiFlaw: String
 }
 
 @MainActor
@@ -26,7 +35,7 @@ final class ExecutiveSessionManager: ObservableObject {
     // MARK: - Engines
     private var acousticEngine: AcousticTelemetryEngine?
     private let speechEngine = SpeechTelemetryEngine()
-    private let frictionEngine = FrictionCoachEngine()
+    private let aiAdversaryEngine = AIAdversaryEngine.shared
     
     // MARK: - Live Telemetry State
     @Published var isSessionActive: Bool = false
@@ -36,18 +45,36 @@ final class ExecutiveSessionManager: ObservableObject {
     @Published var fundamentalPitchHz: Float = 0.0
     @Published var audioPower: Float = 0.0
     @Published var spectralBands: [Float] = Array(repeating: 0.08, count: 8)
+    
+    // Filler Radar
     @Published var totalFillers: Int = 0
     @Published var fillerBreakdown: [String: Int] = [:]
     @Published var lastFillerDetected: String = ""
+    
+    // Hedging & Weak Language Radar (Telemetry 2.0)
+    @Published var totalHedgings: Int = 0
+    @Published var hedgingBreakdown: [String: Int] = [:]
+    @Published var lastHedgingDetected: String = ""
+    
+    // Pause Architecture
+    @Published var strategicPauses: Int = 0
+    @Published var hesitationStalls: Int = 0
+    
+    // Vocal Modulation & Monotony
+    @Published var pitchStdDev: Float = 0.0
+    @Published var modulationGrade: String = "Calibrating"
+    
+    // Live Transcript & Pushback
     @Published var liveTranscript: String = ""
     @Published var activeFrictionAlert: String = ""
     
-    // MARK: - Framework Guidance (Oratey)
+    // MARK: - Framework & Persona Guidance
     @Published var selectedFramework: ExecutiveFramework = FrameworkCatalog.all[0]
+    @Published var activePersona: BoardroomPersona = .cfo
     @Published var currentStepIndex: Int = 0
     @Published var stepRemainingSeconds: Int = 15
     
-    // MARK: - Analytics & History (Well-Spoken)
+    // MARK: - Analytics & History
     @Published var currentStreakDays: Int = 3
     @Published var lifetimeWords: Int = 1420
     @Published var lifetimeSessionsCount: Int = 8
@@ -72,10 +99,18 @@ final class ExecutiveSessionManager: ObservableObject {
                 if freq > 70.0 && freq < 500.0 {
                     self.fundamentalPitchHz = freq
                     self.pitchSamples.append(freq)
-                    if self.pitchSamples.count > 100 {
+                    if self.pitchSamples.count > 120 {
                         self.pitchSamples.removeFirst()
                     }
                 }
+            }
+        }
+        
+        acousticEngine?.onModulationUpdate = { [weak self] stdDev, grade in
+            Task { @MainActor in
+                guard let self = self, self.isSessionActive else { return }
+                self.pitchStdDev = stdDev
+                self.modulationGrade = grade
             }
         }
         
@@ -100,14 +135,34 @@ final class ExecutiveSessionManager: ObservableObject {
                 self.fillerBreakdown = breakdown
             }
         }
+        
+        speechEngine.onHedgingDetected = { [weak self] hedge, total, breakdown in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.lastHedgingDetected = hedge
+                self.totalHedgings = total
+                self.hedgingBreakdown = breakdown
+            }
+        }
+        
+        speechEngine.onPauseMetricsUpdate = { [weak self] strat, stall in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.strategicPauses = strat
+                self.hesitationStalls = stall
+            }
+        }
     }
     
     // MARK: - Session Lifecycle
-    func startSession(with framework: ExecutiveFramework? = nil) {
+    func startSession(with framework: ExecutiveFramework? = nil, persona: BoardroomPersona? = nil) {
         guard !isSessionActive else { return }
         
         if let fw = framework {
             selectedFramework = fw
+        }
+        if let pr = persona {
+            activePersona = pr
         }
         currentStepIndex = 0
         stepRemainingSeconds = selectedFramework.steps.first?.targetSeconds ?? 20
@@ -120,6 +175,13 @@ final class ExecutiveSessionManager: ObservableObject {
         totalFillers = 0
         fillerBreakdown.removeAll()
         lastFillerDetected = ""
+        totalHedgings = 0
+        hedgingBreakdown.removeAll()
+        lastHedgingDetected = ""
+        strategicPauses = 0
+        hesitationStalls = 0
+        pitchStdDev = 0.0
+        modulationGrade = "Calibrating"
         liveTranscript = ""
         activeFrictionAlert = ""
         pitchSamples.removeAll()
@@ -127,10 +189,11 @@ final class ExecutiveSessionManager: ObservableObject {
         try? acousticEngine?.start()
         try? speechEngine.start()
         
-        if selectedFramework.id == "friction" {
-            frictionEngine.start { [weak self] prompt in
+        // Start AI Boardroom Adversary Pushback
+        if selectedFramework.id == "friction" || selectedFramework.id == "capital" {
+            aiAdversaryEngine.start(persona: activePersona) { [weak self] challenge in
                 Task { @MainActor in
-                    self?.activeFrictionAlert = prompt
+                    self?.activeFrictionAlert = challenge
                 }
             }
         }
@@ -150,7 +213,6 @@ final class ExecutiveSessionManager: ObservableObject {
         if stepRemainingSeconds > 0 {
             stepRemainingSeconds -= 1
         } else {
-            // Auto advance or loop step
             if currentStepIndex + 1 < selectedFramework.steps.count {
                 currentStepIndex += 1
                 stepRemainingSeconds = selectedFramework.steps[currentStepIndex].targetSeconds
@@ -173,10 +235,9 @@ final class ExecutiveSessionManager: ObservableObject {
         
         acousticEngine?.stop()
         speechEngine.stop()
-        frictionEngine.stop()
+        aiAdversaryEngine.stop()
         isSessionActive = false
         
-        // Calculate Debrief
         let score = calculateReadinessScore()
         let minPitch = pitchSamples.min() ?? 120.0
         let maxPitch = pitchSamples.max() ?? 140.0
@@ -192,32 +253,79 @@ final class ExecutiveSessionManager: ObservableObject {
         default: grade = liveWPM < 115 ? "Needs Pacing Lift" : "High-Speed Rush"
         }
         
-        let snippet = String(liveTranscript.prefix(180))
+        let snippet = String(liveTranscript.prefix(200))
         
-        let debrief = SessionDebrief(
+        var debrief = SessionDebrief(
             timestamp: Date(),
             durationSeconds: max(1, sessionDuration),
             totalWords: words,
             averageWPM: liveWPM,
             fillerCount: totalFillers,
             fillerBreakdown: fillerBreakdown,
+            hedgingCount: totalHedgings,
+            hedgingBreakdown: hedgingBreakdown,
+            strategicPauses: strategicPauses,
+            hesitationStalls: hesitationStalls,
             readinessScore: score,
             cadenceGrade: grade,
             pitchRangeHz: rangeHz,
+            pitchStdDev: pitchStdDev,
+            modulationGrade: modulationGrade,
             frameworkName: selectedFramework.name,
-            transcriptSnippet: snippet.isEmpty ? "Direct speech exercise recorded." : snippet
+            transcriptSnippet: snippet.isEmpty ? "Direct speech rehearsal recorded." : snippet,
+            aiVerdict: "Calculating AI executive assessment...",
+            aiAnchor: "Opening thesis delivered with executive clarity.",
+            aiFlaw: "Transition into financial justification could be tightened."
         )
         
         lastDebrief = debrief
         isDebriefPresented = true
         
-        // Update lifetime stats
+        // Fetch AI Debrief asynchronously from Edge Worker
+        fetchAIDebrief(transcript: liveTranscript, wpm: liveWPM, fillers: totalFillers, hedgings: totalHedgings)
+        
         lifetimeWords += words
         lifetimeSessionsCount += 1
         savePersistedStats()
     }
     
-    // MARK: - Scoring Algorithm (Speeko & Well-Spoken Synthesis)
+    private func fetchAIDebrief(transcript: String, wpm: Int, fillers: Int, hedgings: Int) {
+        guard !transcript.isEmpty else { return }
+        guard let url = URL(string: "https://vocalis-coach.mohalex.workers.dev/api/debrief") else { return }
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 5.0
+        
+        let body: [String: Any] = [
+            "transcript": transcript,
+            "wpm": wpm,
+            "fillers": fillers,
+            "hedgings": hedgings
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let self = self, let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            
+            let verdict = json["verdict"] as? String ?? ""
+            let anchor = json["anchor"] as? String ?? ""
+            let flaw = json["flaw"] as? String ?? ""
+            
+            DispatchQueue.main.async {
+                if var cur = self.lastDebrief {
+                    if !verdict.isEmpty { cur.aiVerdict = verdict }
+                    if !anchor.isEmpty { cur.aiAnchor = anchor }
+                    if !flaw.isEmpty { cur.aiFlaw = flaw }
+                    self.lastDebrief = cur
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Comprehensive Presence Scoring (Speeko + Well-Spoken + Oratey)
     func calculateReadinessScore() -> Int {
         var score = 100
         
@@ -225,27 +333,37 @@ final class ExecutiveSessionManager: ObservableObject {
         if liveWPM > 0 {
             if liveWPM < 120 {
                 let diff = 120 - liveWPM
-                score -= min(18, diff / 2)
+                score -= min(16, diff / 2)
             } else if liveWPM > 170 {
                 let diff = liveWPM - 170
-                score -= min(20, diff / 2)
+                score -= min(18, diff / 2)
             }
         }
         
-        // 2. Filler Density Penalty (3 pts per filler word, capped at 35 pts)
-        let fillerPenalty = min(35, totalFillers * 3)
+        // 2. Filler Penalty (-3 per filler, max -30)
+        let fillerPenalty = min(30, totalFillers * 3)
         score -= fillerPenalty
         
-        // 3. Monotone / Pitch Variation Bonus / Penalty
-        if pitchSamples.count > 10 {
-            let minP = pitchSamples.min() ?? 100
-            let maxP = pitchSamples.max() ?? 100
-            if (maxP - minP) < 25.0 {
-                score -= 8 // Monotone deduction
-            }
+        // 3. Hedging & Weak Language Penalty (-4 per hedge, max -25)
+        let hedgePenalty = min(25, totalHedgings * 4)
+        score -= hedgePenalty
+        
+        // 4. Strategic Pause Bonus (+2 per pause, max +10)
+        let pauseBonus = min(10, strategicPauses * 2)
+        score += pauseBonus
+        
+        // 5. Hesitation Stall Penalty (-3 per stall, max -15)
+        let stallPenalty = min(15, hesitationStalls * 3)
+        score -= stallPenalty
+        
+        // 6. Vocal Modulation Bonus / Penalty
+        if modulationGrade == "Dynamic & Commanding" {
+            score += 5
+        } else if modulationGrade == "Monotone / Droning" {
+            score -= 6
         }
         
-        return max(15, min(100, score))
+        return max(20, min(99, score))
     }
     
     // MARK: - Persistence

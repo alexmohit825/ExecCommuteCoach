@@ -1,5 +1,5 @@
 // FrameworksModel.swift
-// Executive communication frameworks inspired by Oratey (PREP, STAR, Pyramid Principle, Adversarial Scrutiny).
+// Executive communication frameworks inspired by Oratey (PREP, STAR, Pyramid Principle, Capital Defense, Surgical Governance, Crisis).
 import Foundation
 
 struct FrameworkStep: Identifiable, Hashable {
@@ -43,16 +43,29 @@ enum FrameworkCatalog {
             ]
         ),
         ExecutiveFramework(
-            id: "star",
-            name: "STAR Framework",
-            acronym: "STAR",
-            category: "Interview & Boardroom",
-            overview: "Structure high-stakes case responses and executive achievements with verifiable impact.",
+            id: "capital",
+            name: "Capital Allocation Defense",
+            acronym: "CAPITAL",
+            category: "Boardroom Finance",
+            overview: "Defend high-stakes $5M-$20M capital expenditures against severe scrutiny from skeptical CFOs.",
             steps: [
-                FrameworkStep(title: "Situation", guidance: "Set the context in 1-2 sentences. Avoid backstory bloat.", promptCue: "During the 2024 cloud migration, our payment gateway suffered sudden latency spikes.", targetSeconds: 20),
-                FrameworkStep(title: "Task", guidance: "Clarify your direct responsibility and ownership.", promptCue: "I was tasked with identifying root-cause and restoring sub-50ms latency within 48 hours.", targetSeconds: 15),
-                FrameworkStep(title: "Action", guidance: "Explain the strategic moves YOU executed, not just the team.", promptCue: "I mobilized an isolate team, rewrote edge caching rules, and bypassed legacy VPC hops.", targetSeconds: 40),
-                FrameworkStep(title: "Result", guidance: "Highlight quantified business metrics, revenue saved, and learnings.", promptCue: "Latency dropped to 18ms, preventing an estimated $1.2M in cart abandonment.", targetSeconds: 25)
+                FrameworkStep(title: "The Ask & Payback", guidance: "State requested capital and expected payback timeline.", promptCue: "We are requesting $12M to expand our robotics facility with a 19-month cash breakeven.", targetSeconds: 20),
+                FrameworkStep(title: "Unit Economics", guidance: "Demonstrate margin expansion and operating leverage.", promptCue: "Unit manufacturing cost drops 42%, lifting gross margins to 68%.", targetSeconds: 25),
+                FrameworkStep(title: "Downside Stress Test", guidance: "Show what happens under high-inflation or recession scenarios.", promptCue: "Even if volume drops 30%, our debt service coverage ratio remains above 2.4x.", targetSeconds: 30),
+                FrameworkStep(title: "Execution Gating", guidance: "Propose milestone-based capital tranches to mitigate risk.", promptCue: "Tranche 1 releases $4M upon completion of structural clean-room certification.", targetSeconds: 20)
+            ]
+        ),
+        ExecutiveFramework(
+            id: "clinical",
+            name: "Surgical Governance Defense",
+            acronym: "M&M",
+            category: "Clinical Excellence",
+            overview: "Lead peer review and morbidity reviews with complete objectivity, clinical mastery, and zero defensiveness.",
+            steps: [
+                FrameworkStep(title: "Case Protocol", guidance: "Directly state the clinical condition and surgical indication.", promptCue: "The patient presented with unstable cervical myelopathy requiring urgent C3-C6 decompression.", targetSeconds: 20),
+                FrameworkStep(title: "Evidence Benchmark", guidance: "Cite verified peer-reviewed literature and standard of care.", promptCue: "The intervention followed AO Spine Class I surgical guidelines with intraoperative neuro-monitoring.", targetSeconds: 25),
+                FrameworkStep(title: "Root Cause & Mitigation", guidance: "Acknowledge anatomic anomalies or hardware variance with zero excuses.", promptCue: "V3 vertebral artery tortuosity was identified on pre-op CTA and fully mobilized prior to screw placement.", targetSeconds: 30),
+                FrameworkStep(title: "Systemic Safeguard", guidance: "Present the enduring quality improvement protocol implemented.", promptCue: "We integrated mandatory dual-surgeon scrub verification for all complex spinal reconstructions.", targetSeconds: 20)
             ]
         ),
         ExecutiveFramework(
@@ -69,13 +82,38 @@ enum FrameworkCatalog {
         ),
         ExecutiveFramework(
             id: "friction",
-            name: "Boardroom Pushback",
-            acronym: "Defense",
+            name: "AI Boardroom Pushback",
+            acronym: "Sparring",
             category: "Adversarial Stress Test",
-            overview: "Simulates sudden interruptions and aggressive stakeholder scrutiny during commute practice.",
+            overview: "Live Gemini 3.8 Flash AI actively challenges your pitch over the car speakers in real time.",
             steps: [
-                FrameworkStep(title: "Opening Thesis", guidance: "Begin pitching your proposal clearly.", promptCue: "Deliver your core project update until the board interrupts.", targetSeconds: 25),
+                FrameworkStep(title: "Opening Thesis", guidance: "Begin pitching your proposal clearly.", promptCue: "Deliver your core project update until the AI board member interrupts.", targetSeconds: 25),
                 FrameworkStep(title: "Sustain Under Fire", guidance: "Maintain calm vocal resonance and avoid fillers when interrupted.", promptCue: "Acknowledge the pushback calmly, state the exact risk mitigant, and pivot back.", targetSeconds: 35)
+            ]
+        ),
+        ExecutiveFramework(
+            id: "star",
+            name: "STAR Framework",
+            acronym: "STAR",
+            category: "Interview & Boardroom",
+            overview: "Structure high-stakes case responses and executive achievements with verifiable impact.",
+            steps: [
+                FrameworkStep(title: "Situation", guidance: "Set the context in 1-2 sentences. Avoid backstory bloat.", promptCue: "During the 2024 cloud migration, our payment gateway suffered sudden latency spikes.", targetSeconds: 20),
+                FrameworkStep(title: "Task", guidance: "Clarify your direct responsibility and ownership.", promptCue: "I was tasked with identifying root-cause and restoring sub-50ms latency within 48 hours.", targetSeconds: 15),
+                FrameworkStep(title: "Action", guidance: "Explain the strategic moves YOU executed, not just the team.", promptCue: "I mobilized an isolate team, rewrote edge caching rules, and bypassed legacy VPC hops.", targetSeconds: 40),
+                FrameworkStep(title: "Result", guidance: "Highlight quantified business metrics, revenue saved, and learnings.", promptCue: "Latency dropped to 18ms, preventing an estimated $1.2M in cart abandonment.", targetSeconds: 25)
+            ]
+        ),
+        ExecutiveFramework(
+            id: "crisis",
+            name: "Crisis & Hostile Media",
+            acronym: "CRISIS",
+            category: "High-Stakes PR",
+            overview: "Address severe operational incidents, compliance issues, or hostile stakeholder inquiries with commanding presence.",
+            steps: [
+                FrameworkStep(title: "Immediate Accountability", guidance: "Acknowledge the situation directly without deflection.", promptCue: "At 06:00 today, our regional data center suffered a power drop affecting 14% of transactions.", targetSeconds: 15),
+                FrameworkStep(title: "Action Deployed", guidance: "State concrete containment steps already active.", promptCue: "All traffic was rerouted to our Oregon facility, and core data integrity remains 100% verified.", targetSeconds: 25),
+                FrameworkStep(title: "Restitution & Audit", guidance: "Outline proactive customer compensation and independent audit.", promptCue: "We commissioned an external engineering audit and will issue full credits to affected enterprise accounts.", targetSeconds: 20)
             ]
         )
     ]

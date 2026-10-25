@@ -59,7 +59,7 @@ struct CockpitView: View {
                 // Top Executive Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("EXEC COMMUTE COACH")
+                        Text("EXEC COMMUTE COACH 2.0")
                             .font(.system(size: 11, weight: .bold))
                             .tracking(2)
                             .foregroundColor(AppTheme.executiveGold)
@@ -89,7 +89,7 @@ struct CockpitView: View {
                     isActive: session.isSessionActive
                 )
                 
-                // Real-Time Telemetry HUD (Speeko & Well-Spoken)
+                // Primary Telemetry Row 1 (Cadence & Fillers)
                 HStack(spacing: 12) {
                     // Cadence Card
                     VStack(alignment: .leading, spacing: 6) {
@@ -103,16 +103,16 @@ struct CockpitView: View {
                                 .lineLimit(1)
                         }
                         Text("\(session.liveWPM)")
-                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
                             .foregroundColor(AppTheme.textPrimary)
-                        Text("Words / Min (Target 130-165)")
+                        Text("Words / Min (130-165)")
                             .font(.system(size: 10))
                             .foregroundColor(AppTheme.textSecondary)
                     }
                     .padding(14)
                     .glassCard()
                     
-                    // Filler Words Sentinel
+                    // Filler Sentinel
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Image(systemName: "exclamationmark.bubble.fill")
@@ -125,7 +125,7 @@ struct CockpitView: View {
                             }
                         }
                         Text("\(session.totalFillers)")
-                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
                             .foregroundColor(session.totalFillers > 0 ? AppTheme.coralAlert : AppTheme.textPrimary)
                         Text("Fillers Flagged")
                             .font(.system(size: 10))
@@ -133,24 +133,95 @@ struct CockpitView: View {
                     }
                     .padding(14)
                     .glassCard()
-                    
-                    // Resonance Pitch
+                }
+                
+                // Telemetry Row 2 (Hedging Radar & Pause Architecture)
+                HStack(spacing: 12) {
+                    // Hedging Radar Card
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Image(systemName: "tuningfork")
+                            Image(systemName: "shield.slash.fill")
+                                .foregroundColor(session.totalHedgings > 0 ? AppTheme.coralAlert : AppTheme.cyberCyan)
+                            Spacer()
+                            if !session.lastHedgingDetected.isEmpty {
+                                Text("\"\(session.lastHedgingDetected)\"")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(AppTheme.coralAlert)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Text("\(session.totalHedgings)")
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                            .foregroundColor(session.totalHedgings > 0 ? AppTheme.coralAlert : AppTheme.textPrimary)
+                        Text("Hedging Phrases")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    .padding(14)
+                    .glassCard()
+                    
+                    // Strategic Pauses Card
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "pause.circle.fill")
                                 .foregroundColor(AppTheme.cyberCyan)
                             Spacer()
+                            Text(session.modulationGrade)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(AppTheme.cyberCyan)
+                                .lineLimit(1)
                         }
-                        Text(String(format: "%.0f", session.fundamentalPitchHz))
-                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        Text("\(session.strategicPauses)")
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
                             .foregroundColor(AppTheme.textPrimary)
-                        Text("Pitch (Hz) F0")
+                        Text("Strategic Pauses (\(session.hesitationStalls) stalls)")
                             .font(.system(size: 10))
                             .foregroundColor(AppTheme.textSecondary)
                     }
                     .padding(14)
                     .glassCard()
                 }
+                
+                // Boardroom Adversary Persona Selector
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "brain.head.profile")
+                            .foregroundColor(AppTheme.executiveGold)
+                        Text("AI Boardroom Sparring Persona")
+                            .font(.subheadline).bold()
+                            .foregroundColor(AppTheme.textPrimary)
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 8) {
+                        ForEach(BoardroomPersona.allCases) { persona in
+                            let isSelected = session.activePersona == persona
+                            Button(action: {
+                                session.activePersona = persona
+                            }) {
+                                Text(persona.rawValue)
+                                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(isSelected ? AppTheme.executiveGold.opacity(0.25) : AppTheme.surfaceLight)
+                                    .foregroundColor(isSelected ? AppTheme.executiveGold : AppTheme.textSecondary)
+                                    .cornerRadius(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(isSelected ? AppTheme.executiveGold.opacity(0.4) : Color.clear, lineWidth: 1)
+                                    )
+                            }
+                        }
+                    }
+                    
+                    Text(session.activePersona.subtitle)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .padding(.top, 2)
+                }
+                .padding(16)
+                .glassCard(strokeColor: AppTheme.executiveGold.opacity(0.2))
                 
                 // Framework Guided Teleprompter (Oratey)
                 VStack(alignment: .leading, spacing: 12) {
@@ -190,19 +261,29 @@ struct CockpitView: View {
                         }
                     }
                     
-                    // Adversarial Alert Banner (Friction Mode)
+                    // Dynamic AI Adversary Pushback Banner
                     if !session.activeFrictionAlert.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "bolt.horizontal.fill")
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "bolt.fill")
                                 .foregroundColor(AppTheme.coralAlert)
-                            Text("PUSHBACK: \(session.activeFrictionAlert)")
-                                .font(.caption).bold()
-                                .foregroundColor(AppTheme.coralAlert)
+                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(session.activePersona.rawValue.uppercased()) PUSHBACK:")
+                                    .font(.system(size: 10, weight: .heavy))
+                                    .foregroundColor(AppTheme.coralAlert)
+                                Text("\"\(session.activeFrictionAlert)\"")
+                                    .font(.footnote).bold()
+                                    .foregroundColor(Color.white)
+                            }
                         }
-                        .padding(10)
+                        .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppTheme.coralAlert.opacity(0.15))
-                        .cornerRadius(10)
+                        .background(AppTheme.coralAlert.opacity(0.2))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppTheme.coralAlert.opacity(0.4), lineWidth: 1)
+                        )
                     }
                     
                     if session.isSessionActive && session.selectedFramework.steps.count > 1 {
@@ -329,7 +410,7 @@ struct FrameworksView: View {
             VStack(spacing: 20) {
                 // Header
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("EXECUTIVE FRAMEWORKS")
+                    Text("EXECUTIVE FRAMEWORKS 2.0")
                         .font(.system(size: 11, weight: .bold))
                         .tracking(2)
                         .foregroundColor(AppTheme.electricIndigo)
@@ -362,15 +443,17 @@ struct FrameworksView: View {
                             .foregroundColor(AppTheme.textSecondary)
                         
                         // Steps pills
-                        HStack(spacing: 8) {
-                            ForEach(framework.steps) { step in
-                                Text(step.title)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(AppTheme.surfaceLight)
-                                    .foregroundColor(AppTheme.textPrimary)
-                                    .cornerRadius(6)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(framework.steps) { step in
+                                    Text(step.title)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppTheme.surfaceLight)
+                                        .foregroundColor(AppTheme.textPrimary)
+                                        .cornerRadius(6)
+                                }
                             }
                         }
                         
@@ -409,7 +492,7 @@ struct AnalyticsView: View {
                         .font(.system(size: 11, weight: .bold))
                         .tracking(2)
                         .foregroundColor(AppTheme.emeraldGreen)
-                    Text("Cadence & Presence Trends")
+                    Text("Presence & Cadence Trends")
                         .font(.title2).bold()
                         .foregroundColor(AppTheme.textPrimary)
                 }
@@ -426,7 +509,7 @@ struct AnalyticsView: View {
                         .font(.system(size: 56, weight: .heavy, design: .rounded))
                         .foregroundStyle(AppTheme.goldGradient)
                     
-                    Text("Synthesized across cadence, filler cleanliness, and vocal range")
+                    Text("Synthesized across cadence, filler cleanliness, hedging radar, and pause timing")
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -487,9 +570,16 @@ struct AnalyticsView: View {
                             .foregroundColor(AppTheme.cyberCyan)
                         }
                         
-                        Text("\(debrief.frameworkName) · \(debrief.averageWPM) WPM · \(debrief.fillerCount) Fillers")
+                        Text("\(debrief.frameworkName) · \(debrief.averageWPM) WPM · \(debrief.fillerCount) Fillers · \(debrief.hedgingCount) Hedges")
                             .font(.subheadline)
                             .foregroundColor(AppTheme.textSecondary)
+                        
+                        if !debrief.aiVerdict.isEmpty {
+                            Text("AI Verdict: \(debrief.aiVerdict)")
+                                .font(.caption).italic()
+                                .foregroundColor(AppTheme.executiveGold)
+                                .lineLimit(2)
+                        }
                     }
                     .padding(16)
                     .glassCard()
