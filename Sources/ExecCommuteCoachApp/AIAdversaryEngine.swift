@@ -1,5 +1,6 @@
 // AIAdversaryEngine.swift
 // Dynamic adversarial boardroom pushback powered by Gemini 3.8 Flash via Cloudflare Edge Worker.
+// Incorporates Acoustic Echo Cancellation (AEC) by muting microphone ingestion during spoken challenges.
 import Foundation
 import AVFoundation
 
@@ -83,6 +84,7 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
         timer?.invalidate()
         timer = nil
         speechSynthesizer.stopSpeaking(at: .immediate)
+        AudioPipelineEngine.shared.isMutedForPlayback = false
         isRunning = false
     }
     
@@ -146,6 +148,9 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
     }
     
     private func speakChallengeInCabin(_ text: String) {
+        // 1. Immediately engage AEC muting so the microphone doesn't capture the synthesized voice
+        AudioPipelineEngine.shared.isMutedForPlayback = true
+        
         let utterance = AVSpeechUtterance(string: text)
         utterance.rate = 0.51
         utterance.pitchMultiplier = 0.98
@@ -158,5 +163,26 @@ final class AIAdversaryEngine: NSObject, AVSpeechSynthesizerDelegate {
         
         try? CarAudioDirector.shared.configureSession()
         speechSynthesizer.speak(utterance)
+    }
+    
+    // MARK: - AVSpeechSynthesizerDelegate (Acoustic Echo Cancellation)
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            AudioPipelineEngine.shared.isMutedForPlayback = true
+        }
+    }
+    
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        // Add 350ms buffer to allow cabin reverberations to decay before unmuting microphone
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            AudioPipelineEngine.shared.isMutedForPlayback = false
+        }
+    }
+    
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            AudioPipelineEngine.shared.isMutedForPlayback = false
+        }
     }
 }

@@ -1,5 +1,6 @@
 // SpeechTelemetryEngine.swift
-// Real-time speech analysis, comprehensive filler-word detection, hedging radar, and pause architecture.
+// Continuous speech analysis, filler-word radar, hedging detector, and pause architecture.
+// Decoupled from hardware I/O; receives buffers from AudioPipelineEngine with automatic task recycling.
 import Speech
 import AVFoundation
 
@@ -14,11 +15,15 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     private let recognizer: SFSpeechRecognizer
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
-    private let audioEngine = AVAudioEngine()
     
     private var sessionStartTime: Date?
-    private var wordCount: Int = 0
-    private var isRunning: Bool = false
+    private var isSessionActive: Bool = false
+    
+    // Task Recycling & Continuous Session Continuity
+    private var committedTranscript: String = ""
+    private var currentSegmentTranscript: String = ""
+    private var cycleTimer: Timer?
+    private let segmentMaxDurationSeconds: TimeInterval = 48.0
     
     // Comprehensive Speeko / Well-Spoken filler words catalog
     static let standardFillers: Set<String> = [
@@ -36,9 +41,9 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     // Callbacks
     var onTranscriptUpdate: ((String) -> Void)?
     var onWPMUpdate: ((Int, CadenceZone) -> Void)?
-    var onFillerDetected: ((String, Int, [String: Int]) -> Void)? // (lastFiller, totalFillers, breakdown)
-    var onHedgingDetected: ((String, Int, [String: Int]) -> Void)? // (lastHedge, totalHedging, breakdown)
-    var onPauseMetricsUpdate: ((Int, Int) -> Void)? // (strategicPauses, hesitationStalls)
+    var onFillerDetected: ((String, Int, [String: Int]) -> Void)?
+    var onHedgingDetected: ((String, Int, [String: Int]) -> Void)?
+    var onPauseMetricsUpdate: ((Int, Int) -> Void)?
     
     // Metrics
     private(set) var totalFillersDetected: Int = 0
@@ -49,6 +54,7 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     private(set) var hesitationStalls: Int = 0
     private(set) var currentWPM: Int = 0
     private(set) var fullTranscript: String = ""
+    private(set) var totalWordCount: Int = 0
     
     override init() {
         if let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) {
@@ -60,151 +66,196 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
         self.recognizer.delegate = self
     }
     
-    func start() throws {
-        guard !isRunning else { return }
+    func start() {
+        guard !isSessionActive else { return }
         
-        request = SFSpeechAudioBufferRecognitionRequest()
-        guard let request = request else {
-            throw NSError(domain: "SpeechTelemetry", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to create recognition request"])
-        }
-        request.shouldReportPartialResults = true
-        if recognizer.supportsOnDeviceRecognition {
-            request.requiresOnDeviceRecognition = true
-        }
-        
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
-            throw NSError(domain: "SpeechTelemetry", code: -2, userInfo: [NSLocalizedDescriptionKey: "Microphone format is invalid"])
-        }
-        
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            request.append(buffer)
-        }
-        
-        audioEngine.prepare()
-        try audioEngine.start()
-        
+        isSessionActive = true
         sessionStartTime = Date()
-        wordCount = 0
+        committedTranscript = ""
+        currentSegmentTranscript = ""
+        fullTranscript = ""
+        totalWordCount = 0
         totalFillersDetected = 0
         fillerBreakdown.removeAll()
         totalHedgingsDetected = 0
         hedgingBreakdown.removeAll()
         strategicPauses = 0
         hesitationStalls = 0
-        fullTranscript = ""
+        
+        startRecognitionSegment()
+        scheduleSegmentRecycle()
+    }
+    
+    private func startRecognitionSegment() {
+        request = SFSpeechAudioBufferRecognitionRequest()
+        guard let request = request else { return }
+        request.shouldReportPartialResults = true
+        
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+        }
         
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self = self else { return }
+            guard let self = self, self.isSessionActive else { return }
             
             if let result = result {
-                let spoken = result.bestTranscription.formattedString
-                self.fullTranscript = spoken
-                self.onTranscriptUpdate?(spoken)
+                let segmentText = result.bestTranscription.formattedString
+                self.currentSegmentTranscript = segmentText
                 
-                let lower = spoken.lowercased()
-                let tokens = lower.components(separatedBy: CharacterSet.whitespacesAndNewlines).filter { !$0.isEmpty }
-                self.wordCount = tokens.count
-                
-                // 1. Fillers Analysis
-                var newFillerBreakdown: [String: Int] = [:]
-                var fillerTotal = 0
-                for filler in Self.standardFillers {
-                    let count = self.countOccurrences(of: filler, in: lower)
-                    if count > 0 {
-                        newFillerBreakdown[filler] = count
-                        fillerTotal += count
-                    }
+                // Assemble seamless full transcript across recycled segments
+                let full: String
+                if self.committedTranscript.isEmpty {
+                    full = segmentText
+                } else if segmentText.isEmpty {
+                    full = self.committedTranscript
+                } else {
+                    full = "\(self.committedTranscript) \(segmentText)"
                 }
                 
-                if fillerTotal > self.totalFillersDetected {
-                    var latest = "filler"
-                    for (k, v) in newFillerBreakdown {
-                        if v > (self.fillerBreakdown[k] ?? 0) {
-                            latest = k
-                            break
-                        }
-                    }
-                    self.totalFillersDetected = fillerTotal
-                    self.fillerBreakdown = newFillerBreakdown
-                    self.onFillerDetected?(latest, fillerTotal, newFillerBreakdown)
-                }
+                self.fullTranscript = full
+                self.onTranscriptUpdate?(full)
                 
-                // 2. Hedging & Weak Language Radar
-                var newHedgeBreakdown: [String: Int] = [:]
-                var hedgeTotal = 0
-                for hedge in Self.standardHedgings {
-                    let count = self.countOccurrences(of: hedge, in: lower)
-                    if count > 0 {
-                        newHedgeBreakdown[hedge] = count
-                        hedgeTotal += count
-                    }
-                }
-                
-                if hedgeTotal > self.totalHedgingsDetected {
-                    var latestHedge = "qualifier"
-                    for (k, v) in newHedgeBreakdown {
-                        if v > (self.hedgingBreakdown[k] ?? 0) {
-                            latestHedge = k
-                            break
-                        }
-                    }
-                    self.totalHedgingsDetected = hedgeTotal
-                    self.hedgingBreakdown = newHedgeBreakdown
-                    self.onHedgingDetected?(latestHedge, hedgeTotal, newHedgeBreakdown)
-                }
-                
-                // 3. Pause Architecture via Transcription Segments
-                let segments = result.bestTranscription.segments
-                if segments.count > 1 {
-                    var strat = 0
-                    var stall = 0
-                    for i in 0..<(segments.count - 1) {
-                        let currentEnd = segments[i].timestamp + segments[i].duration
-                        let nextStart = segments[i + 1].timestamp
-                        let gap = nextStart - currentEnd
-                        if gap >= 0.75 && gap <= 2.2 {
-                            strat += 1
-                        } else if gap > 2.5 {
-                            stall += 1
-                        }
-                    }
-                    if strat != self.strategicPauses || stall != self.hesitationStalls {
-                        self.strategicPauses = strat
-                        self.hesitationStalls = stall
-                        self.onPauseMetricsUpdate?(strat, stall)
-                    }
-                }
-                
-                // 4. Rolling WPM & Cadence Zone
-                if let start = self.sessionStartTime {
-                    let elapsedMinutes = Date().timeIntervalSince(start) / 60.0
-                    if elapsedMinutes > 0.05 { // Wait 3 seconds for stabilization
-                        let wpm = Int(Double(self.wordCount) / elapsedMinutes)
-                        self.currentWPM = wpm
-                        
-                        let zone: CadenceZone
-                        if wpm < 125 {
-                            zone = .slow
-                        } else if wpm <= 165 {
-                            zone = .optimal
-                        } else {
-                            zone = .rushing
-                        }
-                        self.onWPMUpdate?(wpm, zone)
-                    }
-                }
+                self.analyzeTextMetrics(fullText: full, segments: result.bestTranscription.segments)
             }
             
             if let error = error {
-                if (error as NSError).code != 216 {
-                    print("Speech telemetry observation: \(error.localizedDescription)")
+                let nsError = error as NSError
+                // If timed out or route reset, auto-recover if session is still active
+                if self.isSessionActive && nsError.code != 216 {
+                    print("Continuous recognition segment recycling on: \(nsError.localizedDescription)")
+                    self.recycleCurrentSegment()
                 }
             }
         }
+    }
+    
+    private func scheduleSegmentRecycle() {
+        cycleTimer?.invalidate()
+        cycleTimer = Timer.scheduledTimer(withTimeInterval: segmentMaxDurationSeconds, repeats: true) { [weak self] _ in
+            self?.recycleCurrentSegment()
+        }
+    }
+    
+    private func recycleCurrentSegment() {
+        guard isSessionActive else { return }
         
-        isRunning = true
+        // Commit current segment text to historical pool
+        if !currentSegmentTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if committedTranscript.isEmpty {
+                committedTranscript = currentSegmentTranscript
+            } else {
+                committedTranscript += " \(currentSegmentTranscript)"
+            }
+        }
+        currentSegmentTranscript = ""
+        
+        // Cleanly finish previous task
+        request?.endAudio()
+        task?.cancel()
+        task = nil
+        request = nil
+        
+        // Start fresh segment with zero audio drops
+        startRecognitionSegment()
+    }
+    
+    func processBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard isSessionActive else { return }
+        request?.append(buffer)
+    }
+    
+    private func analyzeTextMetrics(fullText: String, segments: [SFTranscriptionSegment]) {
+        let lower = fullText.lowercased()
+        let tokens = lower.components(separatedBy: CharacterSet.whitespacesAndNewlines).filter { !$0.isEmpty }
+        totalWordCount = tokens.count
+        
+        // 1. Fillers Analysis
+        var newFillerBreakdown: [String: Int] = [:]
+        var fillerTotal = 0
+        for filler in Self.standardFillers {
+            let count = countOccurrences(of: filler, in: lower)
+            if count > 0 {
+                newFillerBreakdown[filler] = count
+                fillerTotal += count
+            }
+        }
+        
+        if fillerTotal > totalFillersDetected {
+            var latest = "filler"
+            for (k, v) in newFillerBreakdown {
+                if v > (fillerBreakdown[k] ?? 0) {
+                    latest = k
+                    break
+                }
+            }
+            totalFillersDetected = fillerTotal
+            fillerBreakdown = newFillerBreakdown
+            onFillerDetected?(latest, fillerTotal, newFillerBreakdown)
+        }
+        
+        // 2. Hedging & Weak Language Radar
+        var newHedgeBreakdown: [String: Int] = [:]
+        var hedgeTotal = 0
+        for hedge in Self.standardHedgings {
+            let count = countOccurrences(of: hedge, in: lower)
+            if count > 0 {
+                newHedgeBreakdown[hedge] = count
+                hedgeTotal += count
+            }
+        }
+        
+        if hedgeTotal > totalHedgingsDetected {
+            var latestHedge = "qualifier"
+            for (k, v) in newHedgeBreakdown {
+                if v > (hedgingBreakdown[k] ?? 0) {
+                    latestHedge = k
+                    break
+                }
+            }
+            totalHedgingsDetected = hedgeTotal
+            hedgingBreakdown = newHedgeBreakdown
+            onHedgingDetected?(latestHedge, hedgeTotal, newHedgeBreakdown)
+        }
+        
+        // 3. Pause Architecture
+        if segments.count > 1 {
+            var strat = 0
+            var stall = 0
+            for i in 0..<(segments.count - 1) {
+                let currentEnd = segments[i].timestamp + segments[i].duration
+                let nextStart = segments[i + 1].timestamp
+                let gap = nextStart - currentEnd
+                if gap >= 0.75 && gap <= 2.2 {
+                    strat += 1
+                } else if gap > 2.5 {
+                    stall += 1
+                }
+            }
+            if strat != strategicPauses || stall != hesitationStalls {
+                strategicPauses = strat
+                hesitationStalls = stall
+                onPauseMetricsUpdate?(strat, stall)
+            }
+        }
+        
+        // 4. Rolling WPM & Cadence Zone
+        if let start = sessionStartTime {
+            let elapsedMinutes = Date().timeIntervalSince(start) / 60.0
+            if elapsedMinutes > 0.05 {
+                let wpm = Int(Double(totalWordCount) / elapsedMinutes)
+                currentWPM = wpm
+                
+                let zone: CadenceZone
+                if wpm < 125 {
+                    zone = .slow
+                } else if wpm <= 165 {
+                    zone = .optimal
+                } else {
+                    zone = .rushing
+                }
+                onWPMUpdate?(wpm, zone)
+            }
+        }
     }
     
     private func countOccurrences(of target: String, in text: String) -> Int {
@@ -222,13 +273,14 @@ final class SpeechTelemetryEngine: NSObject, SFSpeechRecognizerDelegate {
     }
     
     func stop() {
-        guard isRunning else { return }
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        guard isSessionActive else { return }
+        isSessionActive = false
+        cycleTimer?.invalidate()
+        cycleTimer = nil
+        
         request?.endAudio()
         task?.cancel()
         task = nil
         request = nil
-        isRunning = false
     }
 }

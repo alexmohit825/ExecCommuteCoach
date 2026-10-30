@@ -1,5 +1,6 @@
 // ExecutiveSessionManager.swift
 // Unified orchestrator combining Speeko telemetry, Speak-Up vocal drills, Well-Spoken presence, and Oratey frameworks.
+// Powered by AudioPipelineEngine (single-engine hardware arbiter) and HapticPacerEngine (eyes-free tactile feedback).
 import Foundation
 import SwiftUI
 import Combine
@@ -33,9 +34,11 @@ final class ExecutiveSessionManager: ObservableObject {
     static let shared = ExecutiveSessionManager()
     
     // MARK: - Engines
-    private var acousticEngine: AcousticTelemetryEngine?
+    private let audioPipeline = AudioPipelineEngine.shared
+    private let acousticEngine: AcousticTelemetryEngine?
     private let speechEngine = SpeechTelemetryEngine()
     private let aiAdversaryEngine = AIAdversaryEngine.shared
+    private let hapticEngine = HapticPacerEngine.shared
     
     // MARK: - Live Telemetry State
     @Published var isSessionActive: Bool = false
@@ -87,7 +90,19 @@ final class ExecutiveSessionManager: ObservableObject {
     init() {
         self.acousticEngine = AcousticTelemetryEngine()
         loadPersistedStats()
+        setupPipelineRouting()
         setupEngineCallbacks()
+    }
+    
+    private func setupPipelineRouting() {
+        // Distribute single-tap audio buffers cleanly
+        audioPipeline.onAcousticBuffer = { [weak self] buffer, sampleRate in
+            self?.acousticEngine?.processBuffer(buffer, sampleRate: sampleRate)
+        }
+        
+        audioPipeline.onSpeechBuffer = { [weak self] buffer in
+            self?.speechEngine.processBuffer(buffer)
+        }
     }
     
     private func setupEngineCallbacks() {
@@ -122,8 +137,17 @@ final class ExecutiveSessionManager: ObservableObject {
         
         speechEngine.onWPMUpdate = { [weak self] wpm, zone in
             Task { @MainActor in
-                self?.liveWPM = wpm
-                self?.cadenceZone = zone
+                guard let self = self else { return }
+                let previousZone = self.cadenceZone
+                self.liveWPM = wpm
+                self.cadenceZone = zone
+                
+                // Eyes-Free CoreHaptics triggers
+                if zone == .optimal && previousZone != .optimal {
+                    self.hapticEngine.optimalCadenceZoneEntered()
+                } else if zone == .rushing && previousZone != .rushing {
+                    self.hapticEngine.rushingCadenceAlert()
+                }
             }
         }
         
@@ -133,6 +157,7 @@ final class ExecutiveSessionManager: ObservableObject {
                 self.lastFillerDetected = filler
                 self.totalFillers = total
                 self.fillerBreakdown = breakdown
+                self.hapticEngine.fillerOrHedgeDetected()
             }
         }
         
@@ -142,12 +167,16 @@ final class ExecutiveSessionManager: ObservableObject {
                 self.lastHedgingDetected = hedge
                 self.totalHedgings = total
                 self.hedgingBreakdown = breakdown
+                self.hapticEngine.fillerOrHedgeDetected()
             }
         }
         
         speechEngine.onPauseMetricsUpdate = { [weak self] strat, stall in
             Task { @MainActor in
                 guard let self = self else { return }
+                if strat > self.strategicPauses {
+                    self.hapticEngine.strategicPauseRewarded()
+                }
                 self.strategicPauses = strat
                 self.hesitationStalls = stall
             }
@@ -186,19 +215,27 @@ final class ExecutiveSessionManager: ObservableObject {
         activeFrictionAlert = ""
         pitchSamples.removeAll()
         
-        try? acousticEngine?.start()
-        try? speechEngine.start()
+        acousticEngine?.reset()
+        speechEngine.start()
+        
+        do {
+            try audioPipeline.start()
+        } catch {
+            print("Hardware audio pipeline start issue: \(error.localizedDescription)")
+        }
         
         // Start AI Boardroom Adversary Pushback
         if selectedFramework.id == "friction" || selectedFramework.id == "capital" {
             aiAdversaryEngine.start(persona: activePersona) { [weak self] challenge in
                 Task { @MainActor in
                     self?.activeFrictionAlert = challenge
+                    self?.hapticEngine.aiPushbackIncoming()
                 }
             }
         }
         
         isSessionActive = true
+        hapticEngine.prepare()
         
         sessionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -233,7 +270,7 @@ final class ExecutiveSessionManager: ObservableObject {
         sessionTimer?.invalidate()
         sessionTimer = nil
         
-        acousticEngine?.stop()
+        audioPipeline.stop()
         speechEngine.stop()
         aiAdversaryEngine.stop()
         isSessionActive = false
@@ -281,7 +318,6 @@ final class ExecutiveSessionManager: ObservableObject {
         lastDebrief = debrief
         isDebriefPresented = true
         
-        // Fetch AI Debrief asynchronously from Edge Worker
         fetchAIDebrief(transcript: liveTranscript, wpm: liveWPM, fillers: totalFillers, hedgings: totalHedgings)
         
         lifetimeWords += words
